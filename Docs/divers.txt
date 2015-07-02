@@ -1,0 +1,50 @@
+INERTIE DES GALVANOMETRES ET DU CHANGEMENT DE COULEUR :
+Le débit max (points/s) d'un projecteur laser, certainement établi grâce à la mire ILDA standard, ne donne pas directement les performances de ses galvanomètres.
+A ce débit max, une suite de points décrivant de longs segments avec brusques changements de direction donnera un résultat très déformé à cause de l'inertie des galvanomètres et des limites de leur asservissement.
+En d'autres termes, les galvanomètres ont une fréquence maximale d'oscillation, qui s'pparente à la fréquence de coupure d'un filtre passe-bas.
+
+Comme ces caractéristiques techniques nous sont inconnues, il a fallu procéder de façon empirique pour obtenir un balayage correct. Il a fallu partir de zéro malgré l'inspiration à partir de la rétro-ingénierie du programme Laser Asteroids car aucune astuce n'y était clairement documentée (à part de déduire qu'il faut décomposer le tracé de chaque ligne en une suite de points intermédiaires).
+
+
+* Une simple suite de points uniformément espacés ne suffit pas à obtenir un segment correct : la trajectoire est toujours incurvée près des sommets et le changement de couleur est fréquemment décalé.
+
+* Réessai sans suite de points mais avec répétition du point initial et du final (le tout en couleur finale) pour chaque segment :
+- si la répétition du point initial prédomine alors le changement de couleur se décale par anticipation. Donc il faut effectuer la répétition au niveau du point final.
+- trouver un compromis sur le nombre total de répétitions : trop ==> trop de contraste entre luminosité des sommets et du segment ; pas assez ==> déformation (inertie galvas).
+- déformation résiduelle décrite ci-dessous :
+
+seuls les longs segments dont l'inclinaison est la + éloignée de l'horizontale, de la verticale ou des deux diagonales +-45° présentent une incurvation. Explication (serait + simple en images) :
+- sur une forte amplitude, le mouvement d'un galva n'est plus uniforme mais uniformément accéléré malgré une vitesse initiale non nulle grâce à l'asservissement, qui ne suit plus. Donc :
+	- mouvement horizontal ou vertical : mouvement uniformément accéléré sur un seul des axes, pas de mouvement sur l'autre ==> rectiligne
+	- mouvement à +-45° : uniformément accéléré avec la même amplitude sur les deux axes à la fois ==> rectiligne
+	- entre les deux : accélération faible (càd mouvement presque uniforme) sur l'axe où faible amplitude VS accélération élevée sur l'axe où forte amplitude ==> trajectoire style arc de parabole (on part d'un point près du sommet et on s'en éloigne).
+
+IDEE : point intermédiaire à 25% du début du segment pour donner une vitesse demouvement correcte aux galvs. Rester sur ce point juste le temps qu'il faut (ajuster nb. répétitions) pour donner la direction du mouvement, mais sans arrêter ce dernier ici.
+==> ça fonctionne !
+De +, rajouter un point à 75% améliore encore un peu la rectilinéarité du segment.
+
+
+AUTRE POINT IMPORTANT :
+il est également possible de jouer sur le débit demandé à l'EtherDream (c'est codé en dur dans dac.py, extrait de code repris de Laser Asteroids), et dans ce cas, il faut ajuster les répétitions de points de façon inversement proportionnelle.
+
+Mais un débit faible augmente considérablement le temps de latence de l'affichage (attente de rempissage complet du buffer ?) au point de rendre le jeu impraticable. Un débit élevé est donc préférable.
+
+
+CONCLUSION :
+- s'arrêter plus longtemps sur le point final
+- passer un petit temps sur les points à 25% et 75%
+- débit suffisamment élevé pour amoindrir latence affichage
+
+REGLAGE ACTUEL :
+- débit = 25000 pts/s
+- décomposition de chaque segment en points intermédiaires (couleur du point final) :
+0% :	1x	(remarque : pourquoi pas 0x parce que c'est le point final du coup d'avant ?)
+25% :	3x
+75% :	3x
+100% :	9x
+
+- petite modification empirique pour accélérer l'affichage : comme les segments courts sont peu déformés en l'absence des points intermédiaires, simplifier (et raccourcir) la décomposition en-dessous d'une certaine longueur :
+0% :	1x
+100% :	7x
+
+
